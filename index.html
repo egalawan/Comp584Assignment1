@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <!-- Include Draggable library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/draggable/1.0.0-beta.11/draggable.bundle.legacy.js"></script>
+    <!-- Include Bootstrap for modal -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <h1>Task Manager</h1>
+
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createTaskModal">
+        Create New Task
+    </button>
+
+    <h2>Tasks</h2>
+    <ul id="tasks-list">
+        <li class="draggable">Task 1</li>
+        <li class="draggable">Task 2</li>
+        <!-- ... other tasks ... -->
+    </ul>
+
+    <!-- Modal for creating a new task -->
+    <div class="modal fade" id="createTaskModal" tabindex="-1" role="dialog" aria-labelledby="createTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createTaskModalLabel">Create New Task</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label for="task-name">Task Name:</label>
+                    <input type="text" id="task-name" class="form-control" placeholder="Enter task name">
+                    
+                    <label for="task-description">Task Description:</label>
+                    <textarea id="task-description" class="form-control" placeholder="Enter task description"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="createTask()">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tasksList = document.getElementById('tasks-list');
+    
+            // Initialize Draggable
+            const draggable = new Draggable.Sortable(tasksList, {
+                draggable: '.list-group-item',
+            });
+    
+            function fetchTasks() {
+                // Simulate fetching tasks from local storage
+                const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    
+                // Clear the tasksList before adding new tasks
+                tasksList.innerHTML = '';
+    
+                // Add each task to the tasksList
+                savedTasks.forEach((task, index) => {
+                    addTaskToDOM(task, index);
+                });
+    
+                // Update Draggable to recognize the new tasks
+                draggable.update();
+            }
+    
+            function addTaskToDOM(task, index) {
+                const taskElement = document.createElement('li');
+                taskElement.classList.add('list-group-item', 'draggable');
+    
+                const titleElement = document.createElement('div');
+                titleElement.textContent = `Title: ${task.title}`;
+                
+                const displayOrderElement = document.createElement('div');
+                displayOrderElement.textContent = `Display Order: #${index + 1}`;
+    
+                const viewDetailsButton = document.createElement('button');
+                viewDetailsButton.textContent = 'View Details';
+                viewDetailsButton.classList.add('btn', 'btn-info', 'mt-2');
+                viewDetailsButton.onclick = function () {
+                    // Add logic to view task details (e.g., comments and editable information)
+                    alert(`View details for task: ${task.title}`);
+                };
+    
+                // Append elements to the task element
+                taskElement.appendChild(titleElement);
+                taskElement.appendChild(displayOrderElement);
+                taskElement.appendChild(viewDetailsButton);
+    
+                // Append the task element to the tasks list
+                tasksList.appendChild(taskElement);
+            }
+    
+            function createTask() {
+                const taskNameInput = document.getElementById('task-name');
+                const taskDescriptionInput = document.getElementById('task-description');
+    
+                const taskName = taskNameInput.value.trim();
+                const taskDescription = taskDescriptionInput.value.trim();
+    
+                if (taskName !== '') {
+                    // Add the new task to local storage
+                    const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                    savedTasks.push({ title: taskName, description: taskDescription });
+                    localStorage.setItem('tasks', JSON.stringify(savedTasks));
+    
+                    // Add the new task to the DOM
+                    addTaskToDOM({ title: taskName, description: taskDescription }, savedTasks.length - 1);
+    
+                    // Clear the input fields
+                    taskNameInput.value = '';
+                    taskDescriptionInput.value = '';
+    
+                    // Close the modal
+                    $('#createTaskModal').modal('hide');
+                }
+            }
+    
+            // Expose the createTask function to the global scope
+            window.createTask = createTask;
+    
+            // Fetch tasks and initialize Draggable
+            fetchTasks();
+        });
+    </script>
+
+    <!-- Include Bootstrap JS for modal functionality -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
