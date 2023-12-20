@@ -6,21 +6,21 @@
     <title>Task Manager</title>
     <!-- Include Draggable library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/draggable/1.0.0-beta.11/draggable.bundle.legacy.js"></script>
+    <!-- <script src="script.js"></script> -->
     <!-- Include Bootstrap for modal -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
-<body>
-    <h1>Task Manager</h1>
-
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createTaskModal">
+<body style="text-align: center; margin-left: 25%; margin-right: 25%;">
+    <h1 style="padding-top: 10px;">Task Manager</h1>
+    <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#createTaskModal">
         Create New Task
     </button>
+    <!-- Add this button after the task list -->
+    <button type="button" class="btn btn-danger mt-3" id="clear-all-tasks">Clear All Tasks</button>
 
-    <h2>Tasks</h2>
+    <h2 style="margin-top: 10px;">Tasks</h2>
     <ul id="tasks-list">
-        <li class="draggable">Task 1</li>
-        <li class="draggable">Task 2</li>
-        <!-- ... other tasks ... -->
+        <!-- Tasks will be dynamically added here -->
     </ul>
 
     <!-- Modal for creating a new task -->
@@ -47,92 +47,178 @@
             </div>
         </div>
     </div>
+    <!-- Modal for viewing and updating task details -->
+    <div class="modal fade" id="viewUpdateTaskModal" tabindex="-1" role="dialog" aria-labelledby="viewUpdateTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewUpdateTaskModalLabel">Task Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label for="task-details-title">Task Name:</label>
+                    <input type="text" id="task-details-title" class="form-control">
+                    <label for="task-details-description">Task Description:</label>
+                    <textarea id="task-details-description" class="form-control"></textarea>
+                </div>
+                <div style="margin: 5%; overflow:auto">
+                    <div id="task-comments-container">
+                        <!-- Existing comments will be displayed here and new comments will be added here-->
+                    </div>
+                </div>
+                <div style="margin: 5%;">
+                    <textarea id="task-details-comments" class="form-control"></textarea>
+                    <button style="margin-top: 8px;"type="button" class="btn btn-primary" id="add-comment">Add Comment</button>      
+                </div>   
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" id="update-task">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const tasksList = document.getElementById('tasks-list');
+    document.addEventListener('DOMContentLoaded', function () {
+        const tasksList = document.getElementById('tasks-list');
+        let draggable;
     
-            // Initialize Draggable
-            const draggable = new Draggable.Sortable(tasksList, {
+        function initializeDraggable() {
+            if (draggable) {
+                draggable.destroy();
+            }
+            draggable = new Draggable.Sortable(tasksList, {
                 draggable: '.list-group-item',
+                mirror: {
+                    constrainDimensions: true,
+                },
             });
-    
-            function fetchTasks() {
-                // Simulate fetching tasks from local storage
-                const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-    
-                // Clear the tasksList before adding new tasks
-                tasksList.innerHTML = '';
-    
-                // Add each task to the tasksList
-                savedTasks.forEach((task, index) => {
-                    addTaskToDOM(task, index);
-                });
-    
-                // Update Draggable to recognize the new tasks
-                draggable.update();
-            }
-    
-            function addTaskToDOM(task, index) {
-                const taskElement = document.createElement('li');
-                taskElement.classList.add('list-group-item', 'draggable');
-    
-                const titleElement = document.createElement('div');
-                titleElement.textContent = `Title: ${task.title}`;
-                
-                const displayOrderElement = document.createElement('div');
-                displayOrderElement.textContent = `Display Order: #${index + 1}`;
-    
-                const viewDetailsButton = document.createElement('button');
-                viewDetailsButton.textContent = 'View Details';
-                viewDetailsButton.classList.add('btn', 'btn-info', 'mt-2');
-                viewDetailsButton.onclick = function () {
-                    // Add logic to view task details (e.g., comments and editable information)
-                    alert(`View details for task: ${task.title}`);
-                };
-    
-                // Append elements to the task element
-                taskElement.appendChild(titleElement);
-                taskElement.appendChild(displayOrderElement);
-                taskElement.appendChild(viewDetailsButton);
-    
-                // Append the task element to the tasks list
-                tasksList.appendChild(taskElement);
-            }
-    
-            function createTask() {
-                const taskNameInput = document.getElementById('task-name');
-                const taskDescriptionInput = document.getElementById('task-description');
-    
-                const taskName = taskNameInput.value.trim();
-                const taskDescription = taskDescriptionInput.value.trim();
-    
-                if (taskName !== '') {
-                    // Add the new task to local storage
-                    const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-                    savedTasks.push({ title: taskName, description: taskDescription });
-                    localStorage.setItem('tasks', JSON.stringify(savedTasks));
-    
-                    // Add the new task to the DOM
-                    addTaskToDOM({ title: taskName, description: taskDescription }, savedTasks.length - 1);
-    
-                    // Clear the input fields
-                    taskNameInput.value = '';
-                    taskDescriptionInput.value = '';
-    
-                    // Close the modal
-                    $('#createTaskModal').modal('hide');
-                }
-            }
-    
-            // Expose the createTask function to the global scope
-            window.createTask = createTask;
-    
-            // Fetch tasks and initialize Draggable
-            fetchTasks();
-        });
-    </script>
+            draggable.on('drag:stop', updateDisplayOrder);
+        }
+        
+        function fetchTasks() {
+            const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            savedTasks.sort((a, b) => a.displayOrder - b.displayOrder);
+            tasksList.innerHTML = '';
+            savedTasks.forEach(addTaskToDOM);
+            initializeDraggable();
+        }
 
+        function addTaskToDOM(task) {
+            const taskElement = document.createElement('li');
+            taskElement.classList.add('list-group-item', 'draggable');
+            taskElement.innerHTML = `
+                <div>Title: ${task.title}</div>
+                <div class="display-order">Display Order: #${task.displayOrder}</div>
+                <button class="btn btn-info mt-2" onclick="openViewUpdateModal('${task.title}')">View Details</button>
+            `;
+            tasksList.appendChild(taskElement);
+        }
+
+        //The View Details button and the Update Button functions
+        function openViewUpdateModal(title) {
+            const task = JSON.parse(localStorage.getItem('tasks')).find(t => t.title === title);
+            const viewUpdateModal = $('#viewUpdateTaskModal');
+            document.getElementById('task-details-title').value = task.title;
+            document.getElementById('task-details-description').value = task.description;
+            
+            // Clear the existing value in the comment input box
+            document.getElementById('task-details-comments').value = '';
+
+            // Display existing comments, if any
+            const commentsContainer = document.getElementById('task-comments-container');
+            commentsContainer.innerHTML = task.comments ? task.comments.map(comment => `<div>${comment}</div>`).join('') : '';
+
+            viewUpdateModal.modal('show');
+
+            // Link the Update button to the updateTask function
+            document.getElementById('update-task').onclick = function() {
+                updateTask(title);
+            };
+
+            document.getElementById('add-comment').onclick = function () {
+                addComment(title);
+            };
+
+        }
+
+
+        function addComment(title) {
+            const newComment = document.getElementById('task-details-comments').value.trim();
+            if (newComment !== '') {
+                const tasks = JSON.parse(localStorage.getItem('tasks'));
+                const taskIndex = tasks.findIndex(t => t.title === title);
+                tasks[taskIndex].comments = tasks[taskIndex].comments || [];
+                tasks[taskIndex].comments.push(newComment);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                openViewUpdateModal(title); // Refresh the modal to show the new comment
+            }
+        }
+
+    
+        function updateTask(title) {
+            const updatedTitle = document.getElementById('task-details-title').value.trim();
+            const updatedDescription = document.getElementById('task-details-description').value.trim();
+            const tasks = JSON.parse(localStorage.getItem('tasks'));
+            const taskIndex = tasks.findIndex(t => t.title === title);
+
+            if (taskIndex !== -1) {
+                tasks[taskIndex].title = updatedTitle;
+                tasks[taskIndex].description = updatedDescription;
+                // Handle comments update if needed
+
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                $('#viewUpdateTaskModal').modal('hide');
+                fetchTasks(); // Refresh the task list
+            }
+        }
+    
+        function createTask() {
+            const taskName = document.getElementById('task-name').value.trim();
+            const taskDescription = document.getElementById('task-description').value.trim();
+            if (taskName !== '') {
+                const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                const newTask = { title: taskName, description: taskDescription, displayOrder: savedTasks.length + 1 };
+                savedTasks.push(newTask);
+                localStorage.setItem('tasks', JSON.stringify(savedTasks));
+                addTaskToDOM(newTask, savedTasks.length - 1);
+                document.getElementById('task-name').value = '';
+                document.getElementById('task-description').value = '';
+                $('#createTaskModal').modal('hide');
+            }
+        }
+        
+        //removes the tasks in the localStorage
+        function clearAllTasks() {
+            localStorage.removeItem('tasks');
+            tasksList.innerHTML = '';
+            initializeDraggable();
+        }
+        
+        function updateDisplayOrder() {
+            const taskElements = document.querySelectorAll('#tasks-list .list-group-item');
+            let savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+            const tasksOrderFromDOM = Array.from(taskElements).map(element => element.querySelector('div').textContent.replace('Title: ', ''));
+
+            savedTasks.forEach(task => {
+                const newIndex = tasksOrderFromDOM.indexOf(task.title);
+                task.displayOrder = newIndex + 1; // newIndex will be the position based on the DOM
+            });
+
+            // Save the updated order back to local storage
+            localStorage.setItem('tasks', JSON.stringify(savedTasks));
+        }
+
+        window.createTask = createTask;
+        window.openViewUpdateModal = openViewUpdateModal;
+        document.getElementById('clear-all-tasks').addEventListener('click', clearAllTasks);
+        fetchTasks();
+    });
+    </script>   
+        
     <!-- Include Bootstrap JS for modal functionality -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
